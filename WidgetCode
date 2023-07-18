@@ -1,0 +1,132 @@
+const lightColor = new Color("#ffffff")
+const darkColor = new Color("#1c1c1e")
+
+
+const w = new ListWidget()
+
+w.backgroundColor = Color.dynamic(lightColor, darkColor)
+
+//Setup stacks 
+const titleHolder = w.addStack()
+const secondTitleHolder = titleHolder.addStack()
+secondTitleHolder.layoutVertically()
+w.addSpacer()
+const playersHolder = w.addStack()
+w.addSpacer(5)
+const visitsHolder = w.addStack()
+w.addSpacer(5)
+const favoritesHolder = w.addStack()
+w.addSpacer()
+
+
+// Prep the text boxes 
+const titleText = secondTitleHolder.addText("Loading")
+const playersText = playersHolder.addText("Loading")
+const visitsText = visitsHolder.addText("Loading")
+const favoritesText = favoritesHolder.addText("Loading")
+
+// Weird stuff to deal with title text placement issues
+titleHolder.addSpacer(10)
+titleText.leftAlignText()
+titleText.textColor = new Color("#CC3333") //Roblox red 
+secondTitleHolder.size = new Size(80,50)
+secondTitleHolder.topAlignContent()
+
+//Get device information for text size
+const device = Device
+var resolution = device.screenResolution()
+var textSize = 14 / resolution.width * 828
+
+// Set font sizes
+titleText.font = new Font("Arial-BoldMT", textSize + 2)
+playersText.font = new Font("Arial-BoldMT", textSize)
+visitsText.font = new Font("Arial-BoldMT", textSize)
+favoritesText.font = new Font("Arial-BoldMT", textSize)
+
+//Input game id //
+const gameId = parseInt(args.widgetParameter)
+
+// Transfer gameId to universeID 
+var universeUrl = "https://apis.roblox.com/universes/v1/places/" + gameId +"/universe"
+const universeData = await get(universeUrl) 
+var universeId = universeData.universeId
+
+//Urls 
+var mainUrl = "https://games.roblox.com/v1/games?universeIds=" + universeId
+var imageUrl = "https://thumbnails.roblox.com/v1/games/icons?universeIds=" + universeId + "&size=256x256&format=Png&isCircular=false"
+
+//Get data 
+const mainData = await get(mainUrl)
+const imageData = await get(imageUrl)
+
+//Get specific information
+var playing = mainData.data[0].playing
+var visits = mainData.data[0].visits
+var favorites = mainData.data[0].favoritedCount
+var icon = imageData.data[0].imageUrl
+
+// Set Background Image
+var logo= await loadImage(imageData.data[0].imageUrl)
+const logoImage = titleHolder.addImage(logo)
+logoImage.imageSize = new Size(50,50)
+logoImage.cornerRadius = 10
+logoImage.rightAlignImage()
+
+//Log information
+console.log(mainData.data[0])
+
+//Set information
+titleText.text = mainData.data[0].name
+playersText.text = "Players: " + playing.toLocaleString()
+visitsText.text = "Visits: " + visits.toLocaleString()
+favoritesText.text = "Favorites: " + favorites.toLocaleString()
+
+//Mess with title text size based on max characters 
+const maxTitleChars = 21 / resolution.width * 828
+var titleChars = titleText.text.length
+
+if (titleChars > maxTitleChars){  
+  titleText.font = new Font("Arial-BoldMT", ((textSize + 1) / (titleChars / maxTitleChars)))
+}
+
+const maxLineChars = 20 / resolution.width * 828
+const favoritesChars = favoritesText.text.length
+
+if (favoritesChars > maxLineChars){
+  const newTextSize = textSize * maxLineChars / favoritesChars    
+  playersText.font = new Font("Arial-BoldMT", newTextSize)  
+  visitsText.font = new Font("Arial-BoldMT",   newTextSize)  
+  favoritesText.font = new Font("Arial-BoldMT", newTextSize)
+}
+  
+// Time since update 
+const timeSince = w.addStack()
+const agoText = timeSince.addText("Last Updated: ")
+const timeText = timeSince.addDate(new Date())
+timeText.applyRelativeStyle()
+
+// Details for updated text
+timeText.textOpacity = 0.5
+timeText.font = new Font("Arial-BoldMT", textSize * 5 / 7)
+agoText.textOpacity = 0.5
+agoText.font = new Font("Arial-BoldMT", textSize * 5 / 7)
+agoText.leftAlignText()
+  
+// Widget setup
+Script.setWidget(w)
+Script.complete()
+
+// Get JSON data from api
+async function get(url) {
+const request = new Request(url)
+var result = await request.loadJSON()
+return result
+}
+
+// Parse image from url
+async function loadImage(imgUrl) {
+let req = new Request(imgUrl)
+let image = await req.loadImage()
+console.log(image)
+return image
+}
